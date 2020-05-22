@@ -1,25 +1,211 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: 'Reproducible Research: Peer Assessment 1'
+author: "Dhruvin Shah"
+date: "5/21/2020"
+output: html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
 ## Loading and preprocessing the data
+1. Loading data using read.csv() function
 
+```{r}
+data_raw <- read.csv("activity.csv", header = TRUE)
+head(data_raw)
+```
+
+Dimension of Data:
+```{r}
+dim(data_raw)
+```
+
+Structure of Data:
+```{r}
+str(data_raw)
+```
+
+2. Preprocessing the data
+
+```{r}
+data <- data_raw
+data$date <- as.Date(data$date)
+str(data)
+```
 
 
 ## What is mean total number of steps taken per day?
 
+Finding total number of steps by using group_by() and summarise() function of dplyr library.
+```{r}
+library(dplyr)
+TotalStepsData <- data %>%
+    na.omit() %>%
+    group_by(date) %>%
+    summarise(Steps = sum(steps))
+TotalStepsData <- as.data.frame(TotalStepsData)
+head(TotalStepsData)
+```
 
+Histogram of Total Steps is
+```{r}
+hist(TotalStepsData$Steps, 
+     main = "Histogram of Total Number of Steps",
+     breaks = 25,
+     col = "#086A87",
+     xlab = "Step")
+```
+
+Mean of Total Steps is:
+```{r}
+mean(TotalStepsData$Steps)
+```
+
+Median of Total Steps is:
+```{r}
+median(TotalStepsData$Steps)
+```
 
 ## What is the average daily activity pattern?
 
+Finding Average steps during the 5 - min interval using group_by() and summarise() functions of dplyr library.
+```{r}
+AverageStepsData <- data %>%
+    na.omit() %>%
+    group_by(interval) %>%
+    summarise(Steps = mean(steps))
+AverageStepsData <- as.data.frame(AverageStepsData)
+head(AverageStepsData)
+```
+
+Plotting the Time-series using ggplot() function
+```{r}
+library(ggplot2)
+ggplot(data = AverageStepsData, 
+       aes(x = interval,
+           y = Steps)) +
+    geom_line(color = "#00AFBB", size = 0.5) +
+    labs(title = "Average Number of Steps Taken in an Interval") + 
+    xlab("5 minute Interval") +
+    ylab("Average Steps Taken")
+```
 
 
 ## Imputing missing values
 
+Checking for Missing Values:
+```{r}
+any(is.na(data))
+```
 
+Total Number of Missing Values:
+```{r}
+sum(is.na(data))
+```
+
+Missing Values in each column:
+```{r}
+sapply(data, function(x) sum(length(which(is.na(x)))))
+```
+
+Percentage of Missing Values:
+```{r}
+sapply(data, function(x) (mean(is.na(x)))*100)
+```
+
+Replacing missing values with average of interval
+```{r}
+cleandata <- data
+ for(i in AverageStepsData$interval) {
+     cleandata[cleandata$interval == i & is.na(cleandata$steps), ]$steps <- AverageStepsData$Steps[AverageStepsData$interval == i]
+ }
+```
+
+Checking for any NA values in updated dataset
+```{r}
+any(is.na(cleandata))
+head(cleandata)
+```
+
+Finding total number of steps in clean data by using group_by() and summarise() function of dplyr library.
+```{r}
+TotalStepsCleanData <- cleandata %>%
+    group_by(date) %>%
+    summarise(steps = sum(steps))
+TotalStepsCleanData <- as.data.frame(TotalStepsCleanData)
+head(TotalStepsCleanData)
+```
+
+Histogram of Total Steps of Clean Data is
+```{r}
+hist(TotalStepsCleanData$steps, 
+     main = "Histogram of Total Number of Steps",
+     breaks = 25,
+     col = "#086A87",
+     xlab = "Step")
+```
+
+Mean of Total Steps is:
+```{r}
+mean(TotalStepsCleanData$steps)
+```
+
+Median of Total Steps is:
+```{r}
+median(TotalStepsCleanData$steps)
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+Determing the Phase of Week using weekdays() function
+```{r}
+cleandata$phase <- ""
+cleandata$date <- as.Date(cleandata$date)
+cleandata[weekdays(cleandata$date) == "Saturday" | weekdays(cleandata$date) == "Saturday",]$phase <- "weekend"
+cleandata[!(weekdays(cleandata$date) == "Saturday" | weekdays(cleandata$date) == "Saturday"),]$phase <- "weekday"
+head(cleandata)
+```
+
+Finding Average steps of Week Phase during the 5 - min interval using group_by() and summarise() functions of dplyr library.
+```{r}
+AverageStepsWeekPhase <- cleandata %>%
+    group_by(phase, interval) %>%
+    summarise(steps = mean(steps))
+AverageStepsWeekPhase <- as.data.frame(AverageStepsWeekPhase)
+head(AverageStepsWeekPhase)
+```
+
+Subsetting the Weekday and Weekend Data from Weekphase
+```{r}
+AverageStepsWeekday <- AverageStepsWeekPhase %>%
+    filter(phase == "weekday")
+head(AverageStepsWeekday)
+```
+
+```{r}
+AverageStepsWeekend <- AverageStepsWeekPhase %>%
+    filter(phase == "weekend")
+head(AverageStepsWeekend)
+```
+
+Plotting the Time Series of Weekdays and Weekends Activity
+```{r}
+par(mfrow = c(1,2))
+plot(AverageStepsWeekday$interval, AverageStepsWeekday$steps,
+     main = "Weekday",
+     xlab = "5 minute Interval",
+     ylab = "Average Steps Taken",
+     type = "l", lwd = 2, col = "navy")
+
+plot(AverageStepsWeekend$interval, AverageStepsWeekend$steps,
+     main = "Weekend",
+     xlab = "5 minute Interval",
+     ylab = "Average Steps Taken",
+     type = "l", lwd = 2, col = "red")
+```
+
+```{r}
+
+```
